@@ -1,0 +1,12 @@
+{
+  "id": "cronometro",
+  "name": "Cronômetro",
+  "version": "1.0.0",
+  "description": "Utilitário de cronômetro regressivo. Permite definir um tempo e realiza a contagem regressiva, auxiliando no controle de tempo das atividades do programa.",
+  "author": "maycorolbuche",
+  "category": "utilities",
+  "icon": "mdi-timer-outline",
+  "minAppVersion": "1.0.0",
+  "dependencies": [],
+  "permissions": []
+}

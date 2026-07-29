@@ -28,6 +28,11 @@ export default {
     show: false,
     modules: [],
   },
+  cronometro: {
+    duration: 300,
+    remaining: 300,
+    running: false,
+  },
   tray_area: {
     modules: [],
   },
