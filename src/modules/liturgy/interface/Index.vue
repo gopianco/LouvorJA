@@ -245,11 +245,11 @@
                       icon
                       size="x-small"
                       variant="text"
-                      color="primary"
+                      :color="isItemActive(element) ? 'error' : 'primary'"
                       @click.stop="executeItem(element)"
                     >
                       <v-icon size="16">
-                        {{ getExecuteIcon(element.type) }}
+                        {{ getExecuteIcon(element) }}
                       </v-icon>
                       <v-tooltip
                         activator="parent"
@@ -257,7 +257,7 @@
                         open-delay="300"
                         content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
                       >
-                        {{ getExecuteTooltip(element.type) }}
+                        {{ getExecuteTooltip(element) }}
                       </v-tooltip>
                     </v-btn>
                     <v-btn
@@ -1132,8 +1132,23 @@ export default {
       return ["music", "verse", "link", "media", "timer", "random"].includes(item.type);
     },
 
-    getExecuteIcon(type) {
-      if (type === "media") {
+    // Tipos cuja projeção pode ser alternada (mostrar/remover) direto pela liturgia.
+    isItemActive(item) {
+      if (item.type === "verse") {
+        const popups = this.$appdata.get("popups") || [];
+        const isPopupOpened = popups.some(p => !p.closed);
+        return isPopupOpened && this.$appdata.get("popup_module") === "bible";
+      }
+      if (item.type === "timer") {
+        return !!this.$appdata.get("timer.started");
+      }
+      return false;
+    },
+
+    getExecuteIcon(item) {
+      if (this.isItemActive(item)) return "mdi-eraser";
+
+      if (item.type === "media") {
         const useInternal = this.$userdata.get("modules.config.media_use_internal_player");
         if (useInternal) return "mdi-play";
       }
@@ -1146,10 +1161,12 @@ export default {
         timer: "mdi-open-in-new",
         random: "mdi-open-in-new",
       };
-      return map[type] || "mdi-play";
+      return map[item.type] || "mdi-play";
     },
-    getExecuteTooltip(type) {
-      if (type === "media") {
+    getExecuteTooltip(item) {
+      if (this.isItemActive(item)) return this.t("actions.remove_projection");
+
+      if (item.type === "media") {
         const useInternal = this.$userdata.get("modules.config.media_use_internal_player");
         if (useInternal) return this.t("actions.play");
       }
@@ -1162,7 +1179,7 @@ export default {
         timer: "actions.open",
         random: "actions.open",
       };
-      return this.t(map[type] || "actions.project");
+      return this.t(map[item.type] || "actions.project");
     },
 
     // ====== ADD/EDIT ITEMS ======
@@ -1434,6 +1451,28 @@ export default {
 
     // ====== EXECUTE/PROJECT ITEMS ======
     async executeItem(item) {
+      if (item.type === "verse" && this.isItemActive(item)) {
+        await this.$popup.exit();
+        this.$appdata.set("modules.bible.data.text", null);
+        this.$appdata.set("modules.bible.data.scriptural_reference", null);
+        const returnMonitorId = this.$userdata.get("modules.config.return_screen_monitor");
+        if (returnMonitorId) {
+          await this.$popup.syncReturnMonitor(returnMonitorId);
+        }
+        return;
+      }
+
+      if (item.type === "timer" && this.isItemActive(item)) {
+        this.$appdata.set("timer.running", false);
+        this.$appdata.set("timer.started", false);
+        this.$appdata.set("timer.remaining", this.$appdata.get("timer.duration"));
+        this.$appdata.set("timer.endAt", null);
+        if (this.$appdata.get("popup_module") === "timer") {
+          await this.$popup.exit();
+        }
+        return;
+      }
+
       let targetModule = null;
 
       switch (item.type) {
@@ -1513,11 +1552,20 @@ export default {
         case "timer":
           if (item.timerDuration) {
             this.$appdata.set("timer.duration", item.timerDuration);
-            if (!this.$appdata.get("timer.started")) {
-              this.$appdata.set("timer.remaining", item.timerDuration);
+            this.$appdata.set("timer.remaining", item.timerDuration);
+            this.$appdata.set("timer.endAt", Date.now() + (item.timerDuration * 1000));
+            this.$appdata.set("timer.started", true);
+            this.$appdata.set("timer.running", true);
+
+            // Se nada está projetado, abre o cronômetro em tela cheia; se já há
+            // algo em exibição (versículo, música, etc.), o TimerOverlay mostra
+            // a contagem por cima sem substituir a projeção atual.
+            const popups = this.$appdata.get("popups") || [];
+            const isPopupOpened = popups.some(p => !p.closed);
+            if (!isPopupOpened) {
+              targetModule = "timer";
             }
           }
-          this.$modules.open("timer");
           break;
         case "random":
           this.$modules.open("random");

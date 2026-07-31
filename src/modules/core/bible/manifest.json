@@ -1,7 +1,7 @@
 {
   "id": "bible",
   "name": "Bíblia",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Módulo de estudo e leitura da Bíblia Sagrada. Oferece navegação rápida por livros, capítulos e versículos, com modo de leitura adaptável.",
   "author": "maycorolbuche",
   "category": "bible",

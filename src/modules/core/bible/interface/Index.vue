@@ -213,6 +213,13 @@
                   {{ t('prev_verse') }}
                 </v-tooltip>
               </v-btn>
+              <span
+                v-if="select_bible?.verses && select_bible.verses.length > 1"
+                class="text-caption font-weight-bold text-center"
+                style="color: var(--sidebar-text-secondary); min-width: 32px;"
+              >
+                {{ select_bible.displayIndex + 1 }}/{{ select_bible.verses.length }}
+              </span>
               <v-btn
                 v-shortkey="['arrowright']"
                 :disabled="!(select_bible?.verses && select_bible.verses.length > 0)"
@@ -370,6 +377,7 @@ export default {
       book: null,
       chapter: null,
       verses: [],
+      displayIndex: 0,
       scriptural_reference: null,
       text: null,
     },
@@ -726,11 +734,9 @@ export default {
       if (newVerses.length > 0) {
         this.bible.verses = newVerses;
         this.last_verse = newVerses[newVerses.length - 1];
-        
-        this.select_bible = Object.assign({}, this.bible);
-        this.select_bible.scriptural_reference = this.scripturalReference(this.select_bible);
-        this.select_bible.text = this.getSelectedVerses(this.select_bible.verses);
-        
+
+        this.updateSelectBible(this.bible, 0);
+
         this.$nextTick(() => {
           const element = document.getElementById(`listVerse_${newVerses[0]}`);
           if (element) {
@@ -741,6 +747,20 @@ export default {
       
       this.verseSearchQuery = "";
       this.showVerseSearch = false;
+    },
+    // Monta select_bible exibindo apenas UM versículo por vez (o de displayIndex
+    // dentro de base.verses), mesmo quando base.verses guarda um range/seleção
+    // múltipla — a navegação entre eles é feita por prevVerse()/nextVerse().
+    updateSelectBible(base, displayIndex = 0) {
+      const verses = Array.isArray(base.verses) ? base.verses : [];
+      const clamped = verses.length > 0 ? Math.max(0, Math.min(displayIndex, verses.length - 1)) : 0;
+      const num = verses[clamped];
+
+      this.select_bible = Object.assign({}, base, { verses, displayIndex: clamped });
+      this.select_bible.scriptural_reference = num != null
+        ? this.scripturalReference(Object.assign({}, base, { verses: [num] }))
+        : null;
+      this.select_bible.text = num != null ? (this.verses[num] || "") : null;
     },
     async selVerse(event, num) {
       if (event) {
@@ -772,11 +792,7 @@ export default {
       }
       this.last_verse = num;
       this.bible.verses.sort((a, b) => a - b);
-      this.select_bible = Object.assign({}, this.bible);
-      this.select_bible.scriptural_reference = this.scripturalReference(
-        this.select_bible,
-      );
-      this.select_bible.text = this.getSelectedVerses(this.select_bible.verses);
+      this.updateSelectBible(this.bible, 0);
 
       const element = document.getElementById(`listVerse_${this.last_verse}`);
       if (element) {
@@ -784,6 +800,10 @@ export default {
       }
     },
     async prevVerse() {
+      if (this.select_bible?.verses?.length > 1 && this.select_bible.displayIndex > 0) {
+        this.updateSelectBible(this.select_bible, this.select_bible.displayIndex - 1);
+        return;
+      }
       if (this.select_bible?.id_bible_version) {
         await this.selVersion(this.select_bible.id_bible_version);
       }
@@ -818,6 +838,10 @@ export default {
       }
     },
     async nextVerse() {
+      if (this.select_bible?.verses?.length > 1 && this.select_bible.displayIndex < this.select_bible.verses.length - 1) {
+        this.updateSelectBible(this.select_bible, this.select_bible.displayIndex + 1);
+        return;
+      }
       if (this.select_bible?.id_bible_version) {
         await this.selVersion(this.select_bible.id_bible_version);
       }
@@ -892,23 +916,6 @@ export default {
       ).trim();
     },
 
-    getSelectedVerses(keys) {
-      keys.sort((a, b) => a - b);
-      let result = "";
-      let previousKey = null;
-
-      keys.forEach((key) => {
-        if (previousKey !== null && key - previousKey > 1) {
-          result += " [...] ";
-        } else if (result) {
-          result += " ";
-        }
-        result += this.verses[key];
-        previousKey = key;
-      });
-
-      return result;
-    },
     clean() {
       this.bible.verses = [];
       this.select_bible = {
@@ -918,6 +925,7 @@ export default {
         book: null,
         chapter: null,
         verses: [],
+        displayIndex: 0,
         scriptural_reference: null,
         text: null,
       };
@@ -933,6 +941,7 @@ export default {
         book: null,
         chapter: null,
         verses: [],
+        displayIndex: 0,
         scriptural_reference: null,
         text: null,
       };
