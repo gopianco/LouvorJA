@@ -28,7 +28,7 @@ export default {
       return this.popup_module === "bible";
     },
     show_clock() {
-      return !this.popup_module || this.is_bible_active;
+      return !this.popup_module || this.is_bible_active || this.popup_module === "external_media";
     },
     clock() {
       return this.now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

@@ -33,7 +33,7 @@
     "category": "Separador visual de sección",
     "music": "Seleccione una música del Himnario o Colección",
     "verse": "Seleccione un versículo bíblico",
-    "media": "Seleccione un archivo de video",
+    "media": "Seleccione un video, audio o imagen (una o varias)",
     "link": "Agregue una URL para abrir en el navegador",
     "timer": "Agregue un cronómetro regresivo configurable",
     "random": "Abra el sorteo de nombres o números"

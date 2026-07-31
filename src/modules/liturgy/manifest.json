@@ -1,7 +1,7 @@
 {
   "id": "liturgy",
   "name": "Liturgia",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Organização do culto. Monte a programação da igreja com músicas, versículos, anotações e mídias na sequência desejada.",
   "author": "elvieira",
   "showInMainMenu": true,

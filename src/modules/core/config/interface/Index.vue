@@ -262,7 +262,7 @@
                           
                           <v-switch
                             v-model="media_auto_project_video"
-                            label="Projetar vídeos automaticamente ao abrir"
+                            label="Projetar vídeos e imagens automaticamente ao abrir"
                             color="primary"
                             hide-details
                             inset
@@ -298,7 +298,7 @@
                                     :key="monitor.value"
                                     flat
                                     class="rounded-xl border cursor-pointer"
-                                    :class="media_slide_monitor.includes(monitor.value) ? 'elevation-2' : ''"
+                                    :class="[media_slide_monitor.includes(monitor.value) ? 'elevation-2' : '', (!media_slide_monitor.includes(monitor.value) && return_screen_monitor === monitor.value) ? 'monitor-conflict' : '']"
                                     :style="media_slide_monitor.includes(monitor.value) ? 'background: rgba(0,151,215,0.08); border: 2px solid var(--accent-blue) !important; transition: all 0.2s;' : 'background: var(--main-bg); border: 2px solid transparent !important; transition: all 0.2s; box-shadow: inset 0 0 0 1px var(--border-color);'"
                                     width="160"
                                     @click="toggleMediaSlideMonitor(monitor.value)"
@@ -309,6 +309,9 @@
                                       </v-icon>
                                       <span class="text-body-2 font-weight-bold text-center transition-all" :style="media_slide_monitor.includes(monitor.value) ? 'color: var(--accent-blue)' : 'color: var(--sidebar-text-secondary)'">
                                         {{ monitor.title }}
+                                      </span>
+                                      <span v-if="!media_slide_monitor.includes(monitor.value) && return_screen_monitor === monitor.value" class="text-caption mt-1" style="color: var(--sidebar-text-secondary); opacity: 0.8;">
+                                        Em uso na tela de retorno
                                       </span>
                                     </div>
                                   </v-card>
@@ -516,7 +519,7 @@
                           :key="monitor.value"
                           flat
                           class="rounded-xl border cursor-pointer"
-                          :class="slide_monitor.includes(monitor.value) ? 'elevation-2' : ''"
+                          :class="[slide_monitor.includes(monitor.value) ? 'elevation-2' : '', (!slide_monitor.includes(monitor.value) && return_screen_monitor === monitor.value) ? 'monitor-conflict' : '']"
                           :style="slide_monitor.includes(monitor.value) ? 'background: rgba(0,151,215,0.08); border: 2px solid var(--accent-blue) !important; transition: all 0.2s;' : 'background: var(--main-bg); border: 2px solid transparent !important; transition: all 0.2s; box-shadow: inset 0 0 0 1px var(--border-color);'"
                           width="160"
                           @click="toggleSlideMonitor(monitor.value)"
@@ -527,6 +530,9 @@
                             </v-icon>
                             <span class="text-body-2 font-weight-bold text-center transition-all" :style="slide_monitor.includes(monitor.value) ? 'color: var(--accent-blue)' : 'color: var(--sidebar-text-secondary)'">
                               {{ monitor.title }}
+                            </span>
+                            <span v-if="!slide_monitor.includes(monitor.value) && return_screen_monitor === monitor.value" class="text-caption mt-1" style="color: var(--sidebar-text-secondary); opacity: 0.8;">
+                              Em uso na tela de retorno
                             </span>
                           </div>
                         </v-card>
@@ -550,7 +556,7 @@
                           :key="monitor.value"
                           flat
                           class="rounded-xl border cursor-pointer"
-                          :class="return_screen_monitor === monitor.value ? 'elevation-2' : ''"
+                          :class="[return_screen_monitor === monitor.value ? 'elevation-2' : '', (return_screen_monitor !== monitor.value && (slide_monitor.includes(monitor.value) || media_slide_monitor.includes(monitor.value))) ? 'monitor-conflict' : '']"
                           :style="return_screen_monitor === monitor.value ? 'background: rgba(0,151,215,0.08); border: 2px solid var(--accent-blue) !important; transition: all 0.2s;' : 'background: var(--main-bg); border: 2px solid transparent !important; transition: all 0.2s; box-shadow: inset 0 0 0 1px var(--border-color);'"
                           width="160"
                           @click="toggleReturnScreenMonitor(monitor.value)"
@@ -561,6 +567,9 @@
                             </v-icon>
                             <span class="text-body-2 font-weight-bold text-center transition-all" :style="return_screen_monitor === monitor.value ? 'color: var(--accent-blue)' : 'color: var(--sidebar-text-secondary)'">
                               {{ monitor.title }}
+                            </span>
+                            <span v-if="return_screen_monitor !== monitor.value && (slide_monitor.includes(monitor.value) || media_slide_monitor.includes(monitor.value))" class="text-caption mt-1" style="color: var(--sidebar-text-secondary); opacity: 0.8;">
+                              Em uso na tela principal
                             </span>
                           </div>
                         </v-card>
@@ -1628,7 +1637,9 @@ export default {
       return this.$t(`modules.${this.module_id}.${text}`);
     },
     async syncExternalMediaMonitors() {
-      const isExternalMediaActive = this.$appdata.get("modules.external_media.filePath") != null;
+      // filePath fica em "" (string vazia) quando a mídia é fechada, não null —
+      // por isso a checagem precisa ser de "tem conteúdo", não apenas "não é null".
+      const isExternalMediaActive = !!this.$appdata.get("modules.external_media.filePath");
       if (!isExternalMediaActive) return;
 
       const syncSettings = this.$userdata.get("modules.config.media_sync_projection_settings") !== false;
@@ -1657,6 +1668,10 @@ export default {
       }
     },
     toggleSlideMonitor(val) {
+      if (!this.slide_monitor.includes(val) && this.return_screen_monitor === val) {
+        this.$alert.error({ text: "Este monitor já está definido como tela de retorno. Escolha outro monitor para a tela principal.", translate: false });
+        return;
+      }
       let unselected = this.$userdata.get("modules.config.unselected_slide_monitors") || [];
       if (this.slide_monitor.includes(val)) {
         this.slide_monitor = this.slide_monitor.filter(m => m !== val);
@@ -1668,9 +1683,18 @@ export default {
       this.$userdata.set("modules.config.unselected_slide_monitors", unselected);
     },
     toggleReturnScreenMonitor(val) {
+      const turningOn = this.return_screen_monitor !== val;
+      if (turningOn && (this.slide_monitor.includes(val) || this.media_slide_monitor.includes(val))) {
+        this.$alert.error({ text: "Este monitor já está definido como tela principal. Escolha outro monitor para a tela de retorno.", translate: false });
+        return;
+      }
       this.return_screen_monitor = this.return_screen_monitor === val ? null : val;
     },
     toggleMediaSlideMonitor(val) {
+      if (!this.media_slide_monitor.includes(val) && this.return_screen_monitor === val) {
+        this.$alert.error({ text: "Este monitor já está definido como tela de retorno. Escolha outro monitor para a tela de mídia.", translate: false });
+        return;
+      }
       if (this.media_slide_monitor.includes(val)) {
         this.media_slide_monitor = this.media_slide_monitor.filter(m => m !== val);
       } else {
@@ -1772,5 +1796,8 @@ export default {
 }
 .settings-section h3 {
   opacity: 0.9;
+}
+.monitor-conflict {
+  opacity: 0.5;
 }
 </style>

@@ -22,6 +22,7 @@
 
 <script>
 import $userdata from "@/helpers/UserData";
+import $mediaType from "@/helpers/MediaType";
 
 export default {
   name: "ButtonScreenComponent",
@@ -52,6 +53,10 @@ export default {
     is_selected() {
       return this.is_popup_opened && this.popup_module == this.module;
     },
+    is_external_video() {
+      if (this.module !== "external_media") return false;
+      return $mediaType.isVideo(this.$appdata.get("modules.external_media.filePath") || "");
+    },
   },
   methods: {
     async popup() {
@@ -63,7 +68,7 @@ export default {
           const displays = await window.electronAPI.getDisplays();
           if (displays && displays.length > 1) {
             let configMonitors = [];
-            if (this.module === 'external_media' && $userdata.get("modules.config.media_sync_projection_settings") === false) {
+            if (this.module === "external_media" && $userdata.get("modules.config.media_sync_projection_settings") === false) {
               configMonitors = $userdata.get("modules.config.media_slide_monitor");
             } else {
               configMonitors = $userdata.get("modules.config.slide_monitor");
@@ -80,15 +85,20 @@ export default {
           await this.$popup.syncMonitors(selectedMonitors, this.module, true);
         } else {
           let fullscreen = true;
-          if (this.module === 'external_media' && $userdata.get("modules.config.media_sync_projection_settings") === false) {
+          if (this.module === "external_media" && $userdata.get("modules.config.media_sync_projection_settings") === false) {
             fullscreen = $userdata.get("modules.config.media_slide_fullscreen") !== false;
           } else {
             fullscreen = $userdata.get("modules.config.slide_fullscreen") !== false;
           }
 
-          if (this.module === 'external_media') {
+          if (this.is_external_video) {
             if (fullscreen) {
-              this.$emit('fullscreen');
+              // Vídeo em setup de monitor único: não abre uma janela de popup real
+              // (a própria tela do operador em fullscreen já é a tela principal), mas
+              // ainda assim precisa marcar popup_module para a tela de retorno e outros
+              // indicadores saberem que a mídia externa está sendo exibida.
+              this.$appdata.set("popup_module", this.module);
+              this.$emit("fullscreen");
             }
           } else {
             this.$popup.open({ module: this.module, fullscreen });

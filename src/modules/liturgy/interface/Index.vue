@@ -223,7 +223,12 @@
                       {{ element.done ? 'mdi-check-circle' : 'mdi-checkbox-blank-circle-outline' }}
                     </v-icon>
                   </v-btn>
-                  <v-icon :color="getTypeColor(element.type)" size="20" class="mr-3" :style="element.done ? 'opacity: 0.5;' : ''">
+                  <v-icon
+                    :color="getTypeColor(element.type)"
+                    size="20"
+                    class="mr-3"
+                    :style="element.done ? 'opacity: 0.5;' : ''"
+                  >
                     {{ getTypeIcon(element.type) }}
                   </v-icon>
                   <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;" :style="element.done ? 'opacity: 0.5; text-decoration: line-through;' : ''">
@@ -360,7 +365,12 @@
                         :style="{ background: isHovering ? 'rgba(128,128,128,0.04)' : 'transparent' }"
                         @click="openAddForm(type.value)"
                       >
-                        <v-icon :color="type.color" size="42" class="mb-3" :style="{ transform: isHovering ? 'scale(1.05)' : 'scale(1)', transition: 'transform 0.3s ease' }">
+                        <v-icon
+                          :color="type.color"
+                          size="42"
+                          class="mb-3"
+                          :style="{ transform: isHovering ? 'scale(1.05)' : 'scale(1)', transition: 'transform 0.3s ease' }"
+                        >
                           {{ type.icon }}
                         </v-icon>
                         <div class="font-weight-bold mb-1" style="font-size: 0.95rem; color: var(--sidebar-text); line-height: 1.2;">
@@ -429,10 +439,35 @@
 
                 <!-- Music selector -->
                 <div v-if="addForm.type === 'music'" class="mb-4">
-                  <v-autocomplete v-model="addForm.musicId" v-model:search="musicSearchQuery" :items="filteredMusicList" :custom-filter="() => true" item-title="name" item-value="id_music" :label="t('fields.search_music')" variant="solo-filled" flat bg-color="rgba(128,128,128,0.05)" rounded="xl" density="comfortable" class="modern-input-no-thick" hide-details clearable :menu-props="{ transition: 'fade-transition' }" :list-props="{ style: 'background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color, rgba(150, 150, 150, 0.2)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); padding: 8px 0;' }" @update:model-value="onMusicSelect">
+                  <v-autocomplete
+                    v-model="addForm.musicId"
+                    v-model:search="musicSearchQuery"
+                    :items="filteredMusicList"
+                    :custom-filter="() => true"
+                    item-title="name"
+                    item-value="id_music"
+                    :label="t('fields.search_music')"
+                    variant="solo-filled"
+                    flat
+                    bg-color="rgba(128,128,128,0.05)"
+                    rounded="xl"
+                    density="comfortable"
+                    class="modern-input-no-thick"
+                    hide-details
+                    clearable
+                    :menu-props="{ transition: 'fade-transition' }"
+                    :list-props="{ style: 'background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color, rgba(150, 150, 150, 0.2)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); padding: 8px 0;' }"
+                    @update:model-value="onMusicSelect"
+                  >
                     <template #item="{ item, props }">
-                      <v-list-item v-bind="props" :title="null" class="mx-2 rounded-lg mb-1" color="primary" style="min-height: 40px;">
-                        <template #prepend v-if="item.raw.hymnal_track">
+                      <v-list-item
+                        v-bind="props"
+                        :title="null"
+                        class="mx-2 rounded-lg mb-1"
+                        color="primary"
+                        style="min-height: 40px;"
+                      >
+                        <template v-if="item.raw.hymnal_track" #prepend>
                           <span class="mr-3 font-weight-bold" style="color: var(--accent-blue); min-width: 32px; font-size: 0.85rem;">{{ item.raw.hymnal_track }}</span>
                         </template>
                         <template #title>
@@ -457,9 +492,31 @@
 
                 <!-- Verse selector -->
                 <div v-if="addForm.type === 'verse'">
-                  <v-autocomplete v-model="addForm.verseBookId" :items="bibleBooks" item-title="name" item-value="id_bible_book" :label="t('fields.book')" variant="solo-filled" flat bg-color="rgba(128,128,128,0.05)" rounded="xl" density="comfortable" class="modern-input-no-thick mb-3" hide-details :menu-props="{ transition: 'fade-transition' }" :list-props="{ style: 'background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color, rgba(150, 150, 150, 0.2)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); padding: 8px 0;' }" @update:model-value="onBookSelect">
+                  <v-autocomplete
+                    v-model="addForm.verseBookId"
+                    :items="bibleBooks"
+                    item-title="name"
+                    item-value="id_bible_book"
+                    :label="t('fields.book')"
+                    variant="solo-filled"
+                    flat
+                    bg-color="rgba(128,128,128,0.05)"
+                    rounded="xl"
+                    density="comfortable"
+                    class="modern-input-no-thick mb-3"
+                    hide-details
+                    :menu-props="{ transition: 'fade-transition' }"
+                    :list-props="{ style: 'background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color, rgba(150, 150, 150, 0.2)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); padding: 8px 0;' }"
+                    @update:model-value="onBookSelect"
+                  >
                     <template #item="{ item, props }">
-                      <v-list-item v-bind="props" :title="null" class="mx-2 rounded-lg mb-1" color="primary" style="min-height: 40px;">
+                      <v-list-item
+                        v-bind="props"
+                        :title="null"
+                        class="mx-2 rounded-lg mb-1"
+                        color="primary"
+                        style="min-height: 40px;"
+                      >
                         <template #title>
                           <div class="d-flex align-center">
                             <span class="text-body-2 font-weight-medium" :class="item.value === addForm.verseBookId ? '' : 'opacity-70'">
@@ -478,9 +535,29 @@
                     </template>
                   </v-autocomplete>
                   <div class="d-flex" style="gap: 12px;">
-                    <v-autocomplete v-model="addForm.verseChapter" :items="verseChapterList" :label="t('fields.chapter')" variant="solo-filled" flat bg-color="rgba(128,128,128,0.05)" rounded="xl" density="comfortable" class="modern-input-no-thick mb-3" hide-details style="max-width: 120px;" :menu-props="{ transition: 'fade-transition' }" :list-props="{ style: 'background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color, rgba(150, 150, 150, 0.2)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); padding: 8px 0;' }">
+                    <v-autocomplete
+                      v-model="addForm.verseChapter"
+                      :items="verseChapterList"
+                      :label="t('fields.chapter')"
+                      variant="solo-filled"
+                      flat
+                      bg-color="rgba(128,128,128,0.05)"
+                      rounded="xl"
+                      density="comfortable"
+                      class="modern-input-no-thick mb-3"
+                      hide-details
+                      style="max-width: 120px;"
+                      :menu-props="{ transition: 'fade-transition' }"
+                      :list-props="{ style: 'background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color, rgba(150, 150, 150, 0.2)); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); padding: 8px 0;' }"
+                    >
                       <template #item="{ item, props }">
-                        <v-list-item v-bind="props" :title="null" class="mx-2 rounded-lg mb-1" color="primary" style="min-height: 40px;">
+                        <v-list-item
+                          v-bind="props"
+                          :title="null"
+                          class="mx-2 rounded-lg mb-1"
+                          color="primary"
+                          style="min-height: 40px;"
+                        >
                           <template #title>
                             <div class="d-flex align-center">
                               <span class="text-body-2 font-weight-medium" :class="item.value === addForm.verseChapter ? '' : 'opacity-70'">
@@ -516,12 +593,61 @@
                 <!-- Media file selector -->
                 <div v-if="addForm.type === 'media'" class="mb-4">
                   <div
-                    v-if="addForm.filePath"
+                    v-if="addForm.filePaths.length > 1"
                     class="rounded-xl pa-4 d-flex align-center justify-space-between"
                     style="border: 1px solid var(--border-color, rgba(128,128,128,0.2)); background: rgba(128,128,128,0.05);"
                   >
                     <div class="d-flex align-center" style="overflow: hidden;">
-                      <v-icon color="primary" size="32" class="mr-3">mdi-file-video</v-icon>
+                      <v-icon color="primary" size="32" class="mr-3">
+                        mdi-image-multiple
+                      </v-icon>
+                      <div class="d-flex flex-column" style="overflow: hidden;">
+                        <span class="font-weight-bold text-truncate" style="color: var(--sidebar-text); max-width: 250px;">
+                          {{ addForm.filePaths.length }} imagens selecionadas
+                        </span>
+                        <span class="text-caption text-truncate" style="color: var(--sidebar-text-secondary); max-width: 250px;">
+                          {{ addForm.filePaths.map(p => p.split(/[\\/]/).pop()).join(', ') }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="d-flex align-center">
+                      <v-btn
+                        icon
+                        size="small"
+                        variant="text"
+                        color="primary"
+                        class="mr-1"
+                        @click="selectMediaFile"
+                      >
+                        <v-icon>mdi-pencil</v-icon>
+                        <v-tooltip activator="parent" location="top">
+                          Trocar
+                        </v-tooltip>
+                      </v-btn>
+                      <v-btn
+                        icon
+                        size="small"
+                        variant="text"
+                        color="error"
+                        @click="addForm.filePath = ''; addForm.filePaths = []"
+                      >
+                        <v-icon>mdi-delete</v-icon>
+                        <v-tooltip activator="parent" location="top">
+                          Remover
+                        </v-tooltip>
+                      </v-btn>
+                    </div>
+                  </div>
+
+                  <div
+                    v-else-if="addForm.filePath"
+                    class="rounded-xl pa-4 d-flex align-center justify-space-between"
+                    style="border: 1px solid var(--border-color, rgba(128,128,128,0.2)); background: rgba(128,128,128,0.05);"
+                  >
+                    <div class="d-flex align-center" style="overflow: hidden;">
+                      <v-icon color="primary" size="32" class="mr-3">
+                        {{ getMediaFileIcon(addForm.filePath) }}
+                      </v-icon>
                       <div class="d-flex flex-column" style="overflow: hidden;">
                         <span class="font-weight-bold text-truncate" style="color: var(--sidebar-text); max-width: 250px;">
                           {{ addForm.filePath.split(/[\\/]/).pop() }}
@@ -532,13 +658,30 @@
                       </div>
                     </div>
                     <div class="d-flex align-center">
-                      <v-btn icon size="small" variant="text" color="primary" class="mr-1" @click="selectMediaFile">
+                      <v-btn
+                        icon
+                        size="small"
+                        variant="text"
+                        color="primary"
+                        class="mr-1"
+                        @click="selectMediaFile"
+                      >
                         <v-icon>mdi-pencil</v-icon>
-                        <v-tooltip activator="parent" location="top">Trocar</v-tooltip>
+                        <v-tooltip activator="parent" location="top">
+                          Trocar
+                        </v-tooltip>
                       </v-btn>
-                      <v-btn icon size="small" variant="text" color="error" @click="addForm.filePath = ''">
+                      <v-btn
+                        icon
+                        size="small"
+                        variant="text"
+                        color="error"
+                        @click="addForm.filePath = ''; addForm.filePaths = []"
+                      >
                         <v-icon>mdi-delete</v-icon>
-                        <v-tooltip activator="parent" location="top">Remover</v-tooltip>
+                        <v-tooltip activator="parent" location="top">
+                          Remover
+                        </v-tooltip>
                       </v-btn>
                     </div>
                   </div>
@@ -551,11 +694,16 @@
                     onmouseout="this.style.background='rgba(128,128,128,0.02)'; this.style.borderColor='var(--border-color, rgba(128,128,128,0.2))'"
                     @click="selectMediaFile"
                   >
-                    <v-icon size="36" color="primary" class="mb-2" style="opacity: 0.8;">
+                    <v-icon
+                      size="36"
+                      color="primary"
+                      class="mb-2"
+                      style="opacity: 0.8;"
+                    >
                       mdi-cloud-upload
                     </v-icon>
                     <span class="text-body-2 font-weight-bold" style="color: var(--sidebar-text);">{{ t('fields.select_file') || 'Selecionar Arquivo' }}</span>
-                    <span class="text-caption mt-1" style="color: var(--sidebar-text-secondary);">Clique para buscar no computador</span>
+                    <span class="text-caption mt-1" style="color: var(--sidebar-text-secondary);">Vídeo, áudio ou imagens (uma ou várias)</span>
                   </div>
                 </div>
 
@@ -690,6 +838,7 @@ import manifest from "../manifest.json";
 import MenuToggleButton from "@/components/MenuToggleButton.vue";
 import draggable from "vuedraggable";
 import RichTextEditor from "./RichTextEditor.vue";
+import $mediaType from "@/helpers/MediaType";
 
 export default {
   name: "LiturgyModuleIndex",
@@ -739,6 +888,7 @@ export default {
       verseChapter: null,
       verseNumbers: "",
       filePath: "",
+      filePaths: [],
       url: "",
       timerMinutes: 5,
       timerSeconds: 0,
@@ -766,15 +916,15 @@ export default {
       const isNum = !isNaN(query) && query !== "";
       const numQuery = isNum ? Number(query) : null;
       
-      let results = this.musicList.filter(m => {
+      const results = this.musicList.filter(m => {
         const title = (m.name || "").toLowerCase();
         
         if (isNum) {
           const isHymnalTrack = m.albums?.some(a => a.type === "hymnal" && Number(a.pivot?.track) === numQuery);
           return title.includes(query) || isHymnalTrack;
-        } else {
-          return title.includes(query);
-        }
+        } 
+        return title.includes(query);
+        
       });
       
       if (isNum) {
@@ -912,7 +1062,7 @@ export default {
     setupResizeObserver() {
       if (this.$refs.moduleContainer && !this.resizeObserver) {
         this.resizeObserver = new ResizeObserver((entries) => {
-          for (let entry of entries) {
+          for (const entry of entries) {
             this.isCompactView = entry.contentRect.width < 915;
           }
         });
@@ -1028,6 +1178,7 @@ export default {
         verseChapter: null,
         verseNumbers: "",
         filePath: "",
+        filePaths: [],
         url: "",
         timerMinutes: 5,
         timerSeconds: 0,
@@ -1039,7 +1190,7 @@ export default {
 
       if (this.addForm.type === "verse" && this.addForm.verseNumbers) {
         try {
-          const savedVersion = this.$userdata.get(`modules.bible.selected_version`);
+          const savedVersion = this.$userdata.get("modules.bible.selected_version");
           let versionId = savedVersion;
           if (!versionId) {
             if (this.bibleVersions.length === 0) {
@@ -1098,7 +1249,10 @@ export default {
 
       if (this.addForm.type === "media") {
         item.filePath = this.addForm.filePath;
-        if (item.filePath) {
+        item.filePaths = this.addForm.filePaths.length > 1 ? [...this.addForm.filePaths] : [];
+        if (item.filePaths.length > 1) {
+          item.subtitle = `${item.filePaths.length} imagens`;
+        } else if (item.filePath) {
           const parts = item.filePath.split(/[\\/]/);
           item.subtitle = parts[parts.length - 1];
         }
@@ -1154,6 +1308,7 @@ export default {
         verseChapter: item.verseChapter || null,
         verseNumbers: item.verseNumbers || "",
         filePath: item.filePath || "",
+        filePaths: Array.isArray(item.filePaths) ? [...item.filePaths] : [],
         url: item.url || "",
         timerMinutes: item.timerDuration != null ? Math.floor(item.timerDuration / 60) : 5,
         timerSeconds: item.timerDuration != null ? item.timerDuration % 60 : 0,
@@ -1167,11 +1322,11 @@ export default {
       this.saveLiturgy();
     },
     getItemNumber(index) {
-      if (this.currentItems[index].type === 'category') return null;
+      if (this.currentItems[index].type === "category") return null;
       let count = 0;
       for (let i = 0; i <= index; i++) {
         const item = this.currentItems[i];
-        if (item.type === 'category') {
+        if (item.type === "category") {
           count = 0;
         } else {
           count++;
@@ -1230,21 +1385,45 @@ export default {
     },
 
     // ====== MEDIA FILE SELECTOR ======
+    getMediaFileIcon(filePath) {
+      if ($mediaType.isImage(filePath)) return "mdi-image";
+      if ($mediaType.isAudio(filePath)) return "mdi-file-music";
+      return "mdi-file-video";
+    },
     async selectMediaFile() {
       if (window.electronAPI?.openFileDialog) {
-        const filePath = await window.electronAPI.openFileDialog({
+        const result = await window.electronAPI.openFileDialog({
           title: "Selecionar Mídia",
+          multiple: true,
           filters: [
-            { name: "Mídia", extensions: ["mp4", "mkv", "avi", "mov", "wmv", "webm", "mp3", "wav", "flac", "aac", "ogg", "wma", "m4a"] },
-            { name: "Vídeos", extensions: ["mp4", "mkv", "avi", "mov", "wmv", "webm"] },
-            { name: "Áudios", extensions: ["mp3", "wav", "flac", "aac", "ogg", "wma", "m4a"] },
+            { name: "Mídia", extensions: [...$mediaType.VIDEO_EXTENSIONS, ...$mediaType.AUDIO_EXTENSIONS, ...$mediaType.IMAGE_EXTENSIONS] },
+            { name: "Vídeos", extensions: $mediaType.VIDEO_EXTENSIONS },
+            { name: "Áudios", extensions: $mediaType.AUDIO_EXTENSIONS },
+            { name: "Imagens", extensions: $mediaType.IMAGE_EXTENSIONS },
             { name: "Todos", extensions: ["*"] },
           ],
         });
-        if (filePath) {
-          this.addForm.filePath = filePath;
+        if (!result) return;
+
+        const paths = Array.isArray(result) ? result : [result];
+        if (paths.length === 0) return;
+
+        const allImages = paths.every(p => $mediaType.isImage(p));
+
+        if (paths.length > 1 && allImages) {
+          this.addForm.filePaths = paths;
+          this.addForm.filePath = paths[0];
           if (!this.addForm.name) {
-            const fileName = filePath.split(/[\\/]/).pop();
+            this.addForm.name = `${paths.length} imagens`;
+          }
+        } else {
+          if (paths.length > 1) {
+            this.$alert.error({ text: "Selecione apenas um vídeo ou áudio por vez. Apenas o primeiro arquivo foi usado; para múltiplos arquivos, escolha somente imagens.", translate: false });
+          }
+          this.addForm.filePaths = [];
+          this.addForm.filePath = paths[0];
+          if (!this.addForm.name) {
+            const fileName = paths[0].split(/[\\/]/).pop();
             this.addForm.name = fileName.replace(/\.[^.]+$/, "");
           }
         }
@@ -1285,15 +1464,17 @@ export default {
                 const confirmed = await new Promise((resolve) => {
                   this.$alert.yesno({
                     text: "Uma música está em reprodução no momento. Deseja encerrá-la e reproduzir esta mídia?",
-                    translate: false
-                  }, (res) => resolve(res === "yes"));
+                    translate: false,
+                }, (res) => resolve(res === "yes"));
                 });
                 if (!confirmed) return;
                 this.$media.close(true);
               }
 
               // Reproduz no reprodutor interno (external_media)
+              const galleryPaths = Array.isArray(item.filePaths) && item.filePaths.length > 1 ? item.filePaths : [];
               this.$appdata.set("modules.external_media.filePath", item.filePath);
+              this.$appdata.set("modules.external_media.filePaths", galleryPaths);
               this.$appdata.set("modules.external_media.title", item.name || "");
               this.$appdata.set("modules.external_media.subtitle", item.subtitle || "");
               this.$appdata.set("modules.external_media.minimized", false);
@@ -1303,21 +1484,17 @@ export default {
                 progress: 0,
                 duration: 0,
                 volume: 100,
+                slide_index: 0,
               });
 
-              // Check if it's audio-only
-              const ext = item.filePath.split(".").pop().toLowerCase();
-              const isAudio = ["mp3", "wav", "flac", "aac", "ogg", "wma", "m4a"].includes(ext);
-
-              if (isAudio) {
-                // Audio goes straight to footer bar (minimized)
+              // Áudio vai direto para a barra do rodapé; vídeo e imagem(ns) abrem o player/projeção
+              if ($mediaType.isAudio(item.filePath)) {
                 this.$appdata.set("modules.external_media.minimized", true);
               } else {
-                // Video opens the full module
                 this.$appdata.set("modules.external_media.show", true);
               }
             } else {
-              // Reproduz no reprodutor padrão do sistema operacional
+            // Reproduz no reprodutor padrão do sistema operacional
               if (window.electronAPI && window.electronAPI.openPath) {
                 window.electronAPI.openPath(item.filePath);
               }
@@ -1410,7 +1587,7 @@ export default {
       this.$userdata.set(`modules.${this.module_id}.customLiturgies`, JSON.parse(JSON.stringify(this.customLiturgies)));
     },
     loadSavedLiturgies() {
-      let shouldClearChecks = !this.$appdata.get(`liturgy_checks_cleared`);
+      const shouldClearChecks = !this.$appdata.get("liturgy_checks_cleared");
 
       const saved = this.$userdata.get(`modules.${this.module_id}.liturgies`);
       if (saved) {
@@ -1445,7 +1622,7 @@ export default {
 
       if (shouldClearChecks) {
         this.saveLiturgy();
-        this.$appdata.set(`liturgy_checks_cleared`, true);
+        this.$appdata.set("liturgy_checks_cleared", true);
       }
     },
 
