@@ -8,10 +8,22 @@
       <span class="text-caption text-truncate" :class="isDark ? 'text-grey' : 'text-grey-darken-1'" style="line-height: 1.2;">{{ mediaSubtitle || (isVideo ? 'Vídeo' : 'Áudio') }}</span>
     </div>
 
-    <div class="d-flex align-center mr-6">
-      <v-btn icon variant="text" :color="textColor" size="large" class="mx-1 play-btn" @click="togglePlay">
+    <div v-if="!isImage" class="d-flex align-center mr-6">
+      <v-btn
+        icon
+        variant="text"
+        :color="textColor"
+        size="large"
+        class="mx-1 play-btn"
+        @click="togglePlay"
+      >
         <v-icon>{{ isPaused ? 'mdi-play-circle' : 'mdi-pause-circle' }}</v-icon>
-        <v-tooltip activator="parent" location="top" open-delay="300" content-class="modern-glass-menu elevation-0 font-weight-medium text-white">
+        <v-tooltip
+          activator="parent"
+          location="top"
+          open-delay="300"
+          content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
+        >
           {{ isPaused ? 'Reproduzir' : 'Pausar' }}
         </v-tooltip>
       </v-btn>
@@ -32,17 +44,56 @@
       <span class="text-caption ml-3 font-weight-medium" :class="isDark ? 'text-grey' : 'text-grey-darken-1'" style="opacity: 0.8;">{{ formatTime(duration) }}</span>
     </div>
 
+    <div v-if="isGallery" class="d-flex align-center flex-grow-1 mr-6" style="min-width: 150px;">
+      <v-btn
+        icon
+        variant="text"
+        :color="textColor"
+        size="small"
+        class="mx-1"
+        :disabled="slideIndex <= 0"
+        @click="prevImage"
+      >
+        <v-icon>mdi-chevron-left</v-icon>
+      </v-btn>
+      <span class="text-caption font-weight-medium mx-2" :class="isDark ? 'text-grey' : 'text-grey-darken-1'" style="opacity: 0.8;">{{ slideIndex + 1 }} / {{ galleryLength }}</span>
+      <v-btn
+        icon
+        variant="text"
+        :color="textColor"
+        size="small"
+        class="mx-1"
+        :disabled="slideIndex >= galleryLength - 1"
+        @click="nextImage"
+      >
+        <v-icon>mdi-chevron-right</v-icon>
+      </v-btn>
+    </div>
+
     <div v-if="duration > 0" class="d-flex align-center">
-      <v-menu location="top center" :close-on-content-click="false" open-on-hover :open-delay="50">
+      <v-menu
+        location="top center"
+        :close-on-content-click="false"
+        open-on-hover
+        :open-delay="50"
+      >
         <template #activator="{ props }">
-          <v-btn :icon="volumeIcon" variant="text" :color="textColor" size="small" v-bind="props" class="mx-1" @click="toggleMute" />
+          <v-btn
+            :icon="volumeIcon"
+            variant="text"
+            :color="textColor"
+            size="small"
+            v-bind="props"
+            class="mx-1"
+            @click="toggleMute"
+          />
         </template>
-        <v-card 
-          class="py-2 px-4 rounded-lg d-flex align-center elevation-3" 
-          :color="!isDark ? '#f4f5f7' : ''" 
-          :theme="!isDark ? 'light' : 'dark'" 
-          min-width="130" 
-          height="40" 
+        <v-card
+          class="py-2 px-4 rounded-lg d-flex align-center elevation-3"
+          :color="!isDark ? '#f4f5f7' : ''"
+          :theme="!isDark ? 'light' : 'dark'"
+          min-width="130"
+          height="40"
           style="overflow: hidden;"
         >
           <v-slider
@@ -63,7 +114,7 @@
 
     <div class="d-flex align-center">
       <v-btn
-        v-if="isVideo && playerWidth >= 600 && !showExternalMiniPlayer"
+        v-if="isVisualMedia && playerWidth >= 600 && !showExternalMiniPlayer"
         variant="text"
         size="small"
         icon
@@ -72,7 +123,12 @@
         @click="maximize()"
       >
         <v-icon>mdi-arrow-expand-all</v-icon>
-        <v-tooltip activator="parent" location="top" open-delay="300" content-class="modern-glass-menu elevation-0 font-weight-medium text-white">
+        <v-tooltip
+          activator="parent"
+          location="top"
+          open-delay="300"
+          content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
+        >
           Maximizar
         </v-tooltip>
       </v-btn>
@@ -85,7 +141,12 @@
         @click="closeMedia()"
       >
         <v-icon>mdi-close</v-icon>
-        <v-tooltip activator="parent" location="top" open-delay="300" content-class="modern-glass-menu elevation-0 font-weight-medium text-white">
+        <v-tooltip
+          activator="parent"
+          location="top"
+          open-delay="300"
+          content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
+        >
           Fechar
         </v-tooltip>
       </v-btn>
@@ -94,6 +155,8 @@
 </template>
 
 <script>
+import $mediaType from "@/helpers/MediaType";
+
 export default {
   name: "ExternalMediaFooterPlayer",
   data() {
@@ -128,9 +191,27 @@ export default {
       return this.$appdata.get("modules.external_media.subtitle") || "";
     },
     isVideo() {
-      if (!this.rawFilePath) return false;
-      const ext = this.rawFilePath.split(".").pop().toLowerCase();
-      return ["mp4", "mkv", "avi", "mov", "wmv", "webm"].includes(ext);
+      return $mediaType.isVideo(this.rawFilePath);
+    },
+    isImage() {
+      return $mediaType.isImage(this.rawFilePath);
+    },
+    isVisualMedia() {
+      return this.isVideo || this.isImage;
+    },
+    rawFilePaths() {
+      const arr = this.$appdata.get("modules.external_media.filePaths");
+      return Array.isArray(arr) && arr.length > 1 ? arr : (this.rawFilePath ? [this.rawFilePath] : []);
+    },
+    isGallery() {
+      return this.rawFilePaths.length > 1;
+    },
+    galleryLength() {
+      return this.rawFilePaths.length;
+    },
+    slideIndex() {
+      const idx = this.$appdata.get("modules.external_media.config.slide_index") || 0;
+      return Math.min(Math.max(idx, 0), Math.max(this.rawFilePaths.length - 1, 0));
     },
     isPaused() {
       return this.$appdata.get("modules.external_media.config.is_paused") !== false;
@@ -183,24 +264,36 @@ export default {
     }
   },
   methods: {
+    goToImage(index) {
+      const total = this.rawFilePaths.length;
+      if (total === 0) return;
+      const clamped = Math.min(Math.max(index, 0), total - 1);
+      this.$appdata.set("modules.external_media.config.slide_index", clamped);
+    },
+    prevImage() {
+      this.goToImage(this.slideIndex - 1);
+    },
+    nextImage() {
+      this.goToImage(this.slideIndex + 1);
+    },
     togglePlay() {
       this.$appdata.set("modules.external_media.config.request_action", {
         action: "toggle_play",
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     },
     seekFromProgress() {
       this.$appdata.set("modules.external_media.config.request_action", {
         action: "seek",
         value: this.progress,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     },
     onVolumeChange() {
       this.$appdata.set("modules.external_media.config.request_action", {
         action: "set_volume",
         value: this.volume,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       this.$appdata.set("modules.external_media.config.volume", this.volume);
     },
@@ -220,7 +313,7 @@ export default {
     closeMedia() {
       this.$appdata.set("modules.external_media.config.request_action", {
         action: "close",
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     },
     formatTime(seconds) {

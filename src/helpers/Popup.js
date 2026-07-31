@@ -14,7 +14,8 @@ function splitPopups() {
 function isReturnContentActive() {
   return (
     $appdata.get("modules.media.id_music") != null ||
-    !!$appdata.get("modules.bible.data.text")
+    !!$appdata.get("modules.bible.data.text") ||
+    !!$appdata.get("modules.external_media.filePath")
   );
 }
 

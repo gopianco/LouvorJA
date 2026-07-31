@@ -1,6 +1,29 @@
 <template>
   <div class="w-100 h-100 d-flex flex-column justify-space-between pa-8 return-screen" :style="style_bg">
-    <div class="d-flex flex-column align-center justify-center flex-grow-1" style="gap: 24px;">
+    <div v-if="is_external_media_active" class="d-flex flex-column align-center justify-center flex-grow-1 position-relative" style="min-height: 0;">
+      <div v-if="external_media_is_image" class="w-100 h-100 position-relative d-flex align-center justify-center">
+        <img :src="external_media_resolved_path" class="media-preview-img" />
+        <div v-if="external_media_gallery_count > 1" class="media-gallery-counter">
+          {{ external_media_slide_index + 1 }} / {{ external_media_gallery_count }}
+        </div>
+      </div>
+      <div v-else-if="external_media_is_video" class="w-100 h-100 d-flex align-center justify-center">
+        <video
+          ref="returnVideo"
+          :src="external_media_resolved_path"
+          class="media-preview-img"
+          muted
+          @canplay="onReturnVideoCanPlay"
+        />
+      </div>
+      <div v-else class="text-center current-lyric" style="opacity: 0.5;">
+        <v-icon size="64" class="mb-2 d-block mx-auto">
+          mdi-music-circle
+        </v-icon>
+        {{ external_media_title }}
+      </div>
+    </div>
+    <div v-else class="d-flex flex-column align-center justify-center flex-grow-1" style="gap: 24px;">
       <div v-if="main_text && is_bible_active" class="text-center current-lyric" :style="{ fontSize: bible_font_size }">
         {{ main_text }}
       </div>
@@ -21,6 +44,7 @@
 
 <script>
 import $media from "@/helpers/Media";
+import $mediaType from "@/helpers/MediaType";
 
 export default {
   name: "ReturnScreenComponent",
@@ -30,6 +54,52 @@ export default {
     },
     is_bible_active() {
       return this.popup_module === "bible";
+    },
+    is_external_media_active() {
+      return this.popup_module === "external_media";
+    },
+    external_media_raw_path() {
+      return this.$appdata.get("modules.external_media.filePath") || "";
+    },
+    external_media_raw_paths() {
+      const arr = this.$appdata.get("modules.external_media.filePaths");
+      return Array.isArray(arr) && arr.length > 1 ? arr : (this.external_media_raw_path ? [this.external_media_raw_path] : []);
+    },
+    external_media_gallery_count() {
+      return this.external_media_raw_paths.length;
+    },
+    external_media_slide_index() {
+      const idx = this.$appdata.get("modules.external_media.config.slide_index") || 0;
+      return Math.min(Math.max(idx, 0), Math.max(this.external_media_raw_paths.length - 1, 0));
+    },
+    external_media_current_raw_path() {
+      return this.external_media_gallery_count > 1
+        ? (this.external_media_raw_paths[this.external_media_slide_index] || this.external_media_raw_path)
+        : this.external_media_raw_path;
+    },
+    external_media_resolved_path() {
+      const raw = this.external_media_current_raw_path;
+      if (!raw) return "";
+      if (window.electronAPI) {
+        const prefix = raw.startsWith("/") ? "local://app" : "local://app/";
+        return `${prefix}${raw}`;
+      }
+      return raw;
+    },
+    external_media_is_video() {
+      return $mediaType.isVideo(this.external_media_raw_path);
+    },
+    external_media_is_image() {
+      return $mediaType.isImage(this.external_media_raw_path);
+    },
+    external_media_title() {
+      return this.$appdata.get("modules.external_media.title") || "Mídia Externa";
+    },
+    external_media_current_time() {
+      return this.$appdata.get("modules.external_media.config.current_time");
+    },
+    external_media_is_paused() {
+      return this.$appdata.get("modules.external_media.config.is_paused");
     },
     bible_data() {
       return this.$appdata.get("modules.bible.data") || {};
@@ -82,9 +152,37 @@ export default {
       return this.next_slide?.lyric;
     },
   },
+  watch: {
+    external_media_current_time(val) {
+      const video = this.$refs.returnVideo;
+      if (video && !video.seeking) {
+        if (Math.abs(video.currentTime - val) > 0.5) {
+          video.currentTime = val;
+        }
+      }
+    },
+    external_media_is_paused(val) {
+      this.$nextTick(() => {
+        const video = this.$refs.returnVideo;
+        if (!video) return;
+        if (val) {
+          video.pause();
+        } else {
+          video.play().catch(() => {});
+        }
+      });
+    },
+  },
   methods: {
     t(text) {
       return this.$t(`modules.config.${text}`);
+    },
+    onReturnVideoCanPlay() {
+      const video = this.$refs.returnVideo;
+      if (video && !this.external_media_is_paused) {
+        video.currentTime = this.external_media_current_time || 0;
+        video.play().catch(() => {});
+      }
     },
   },
 };
@@ -111,5 +209,23 @@ export default {
   height: 2px;
   opacity: 0.25;
   border-radius: 1px;
+}
+.media-preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.media-gallery-counter {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: none;
 }
 </style>

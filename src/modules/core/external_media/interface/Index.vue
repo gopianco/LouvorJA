@@ -2,7 +2,7 @@
   <div>
     <!-- Hidden audio player (ONLY for audio files) -->
     <audio
-      v-if="!isVideo && filePath"
+      v-if="!isVisualMedia && filePath"
       ref="audioEl"
       :src="filePath"
       preload="auto"
@@ -68,9 +68,9 @@
           </v-btn>
         </div>
 
-        <div 
-          class="modern-media-toolbar-right align-center" 
-          :class="(isVideo && !autoProject) ? 'd-flex' : 'd-none'"
+        <div
+          class="modern-media-toolbar-right align-center"
+          :class="(isVisualMedia && !autoProject) ? 'd-flex' : 'd-none'"
         >
           <ButtonScreen 
             ref="btnScreen"
@@ -112,13 +112,54 @@
                 @stalled="onStalled"
               />
 
+              <!-- IMAGE / GALLERY -->
+              <img
+                v-if="isImage && filePath"
+                class="w-100 h-100"
+                style="object-fit: contain;"
+                :src="filePath"
+              />
+
               <!-- Audio-only visual placeholder -->
-              <div v-if="!isVideo && filePath" class="d-flex flex-column align-center justify-center text-white" style="gap: 16px;">
-                <v-icon size="80" color="white" style="opacity: 0.6;">mdi-music-circle</v-icon>
+              <div v-if="!isVisualMedia && filePath" class="d-flex flex-column align-center justify-center text-white" style="gap: 16px;">
+                <v-icon size="80" color="white" style="opacity: 0.6;">
+                  mdi-music-circle
+                </v-icon>
                 <div class="text-h6 font-weight-medium text-center px-6" style="opacity: 0.9;">
                   {{ mediaTitle }}
                 </div>
               </div>
+
+              <!-- Gallery navigation overlay -->
+              <template v-if="isImage && isGallery">
+                <v-btn
+                  icon
+                  variant="flat"
+                  color="rgba(0,0,0,0.4)"
+                  class="gallery-nav-btn gallery-nav-prev"
+                  :disabled="slideIndex <= 0"
+                  @click="prevImage"
+                >
+                  <v-icon color="white">
+                    mdi-chevron-left
+                  </v-icon>
+                </v-btn>
+                <v-btn
+                  icon
+                  variant="flat"
+                  color="rgba(0,0,0,0.4)"
+                  class="gallery-nav-btn gallery-nav-next"
+                  :disabled="slideIndex >= rawFilePaths.length - 1"
+                  @click="nextImage"
+                >
+                  <v-icon color="white">
+                    mdi-chevron-right
+                  </v-icon>
+                </v-btn>
+                <div class="gallery-counter">
+                  {{ slideIndex + 1 }} / {{ rawFilePaths.length }}
+                </div>
+              </template>
 
               <!-- Fullscreen controls overlay -->
               <div
@@ -134,8 +175,15 @@
                     @mouseenter="fullscreenMouseEnter"
                     @mouseleave="fullscreenMouseLeave"
                   >
-                    <div class="external-media-controls-bar fullscreen-bar w-100 d-flex align-center px-6 py-2">
-                      <v-btn icon variant="text" color="white" size="large" class="mx-1 play-btn" @click="togglePlay">
+                    <div v-if="!isImage" class="external-media-controls-bar fullscreen-bar w-100 d-flex align-center px-6 py-2">
+                      <v-btn
+                        icon
+                        variant="text"
+                        color="white"
+                        size="large"
+                        class="mx-1 play-btn"
+                        @click="togglePlay"
+                      >
                         <v-icon>{{ isPaused ? 'mdi-play-circle' : 'mdi-pause-circle' }}</v-icon>
                       </v-btn>
                       <span class="text-caption mr-3 font-weight-medium text-white" style="opacity: 0.8;">{{ formatTime(currentTime) }}</span>
@@ -150,17 +198,80 @@
                         @click="seekFromProgress"
                       />
                       <span class="text-caption ml-3 font-weight-medium text-white" style="opacity: 0.8;">{{ formatTime(duration) }}</span>
-                      <v-menu location="top center" :close-on-content-click="false" open-on-hover :open-delay="50" :attach="true">
+                      <v-menu
+                        location="top center"
+                        :close-on-content-click="false"
+                        open-on-hover
+                        :open-delay="50"
+                        :attach="true"
+                      >
                         <template #activator="{ props }">
-                          <v-btn :icon="volumeIcon" variant="text" color="white" size="small" v-bind="props" class="mx-1" @click="toggleMute" />
+                          <v-btn
+                            :icon="volumeIcon"
+                            variant="text"
+                            color="white"
+                            size="small"
+                            v-bind="props"
+                            class="mx-1"
+                            @click="toggleMute"
+                          />
                         </template>
-                        <v-card class="py-2 px-4 rounded-lg d-flex align-center modern-glass-menu elevation-0" theme="dark" min-width="130" height="40" style="overflow: hidden;">
-                          <v-slider v-model="volume" color="white" track-color="grey" hide-details thumb-size="12" step="1" min="0" max="100" class="ma-0 pa-0 w-100" @update:model-value="onVolumeChange" />
+                        <v-card
+                          class="py-2 px-4 rounded-lg d-flex align-center modern-glass-menu elevation-0"
+                          theme="dark"
+                          min-width="130"
+                          height="40"
+                          style="overflow: hidden;"
+                        >
+                          <v-slider
+                            v-model="volume"
+                            color="white"
+                            track-color="grey"
+                            hide-details
+                            thumb-size="12"
+                            step="1"
+                            min="0"
+                            max="100"
+                            class="ma-0 pa-0 w-100"
+                            @update:model-value="onVolumeChange"
+                          />
                         </v-card>
                       </v-menu>
-                      <v-btn variant="text" size="small" icon color="white" class="mx-1" @click="isFullscreen = false">
+                      <v-btn
+                        variant="text"
+                        size="small"
+                        icon
+                        color="white"
+                        class="mx-1"
+                        @click="isFullscreen = false"
+                      >
                         <v-icon>mdi-fullscreen-exit</v-icon>
-                        <v-tooltip activator="parent" location="top" open-delay="300" content-class="modern-glass-menu elevation-0 font-weight-medium text-white">
+                        <v-tooltip
+                          activator="parent"
+                          location="top"
+                          open-delay="300"
+                          content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
+                        >
+                          Sair da Tela Cheia
+                        </v-tooltip>
+                      </v-btn>
+                    </div>
+                    <div v-else class="external-media-controls-bar fullscreen-bar w-100 d-flex align-center justify-end px-6 py-2">
+                      <v-btn
+                        variant="text"
+                        size="small"
+                        icon
+                        color="white"
+                        class="mx-1"
+                        @click="isFullscreen = false"
+                      >
+                        <v-icon>mdi-fullscreen-exit</v-icon>
+                        <v-tooltip
+                          activator="parent"
+                          location="top"
+                          open-delay="300"
+                          content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
+                        >
                           Sair da Tela Cheia
                         </v-tooltip>
                       </v-btn>
@@ -178,39 +289,119 @@
             <div class="modern-pill-player d-flex align-center px-6 py-2 mx-auto">
               <div v-if="pillWidth >= 600" class="player-info d-flex flex-column mr-6" style="max-width: 220px; min-width: 150px;">
                 <span class="text-subtitle-2 font-weight-bold text-truncate text-white" style="line-height: 1.2;">{{ mediaTitle }}</span>
-                <span class="text-caption text-truncate text-grey" style="line-height: 1.2;">{{ mediaSubtitle || (isVideo ? 'Vídeo' : 'Áudio') }}</span>
+                <span class="text-caption text-truncate text-grey" style="line-height: 1.2;">{{ mediaSubtitle || mediaKindLabel }}</span>
               </div>
-              <div class="d-flex align-center mr-6">
-                <v-btn icon variant="text" color="white" size="large" class="mx-1 play-btn" @click="togglePlay">
-                  <v-icon>{{ isPaused ? 'mdi-play-circle' : 'mdi-pause-circle' }}</v-icon>
+
+              <template v-if="!isImage">
+                <div class="d-flex align-center mr-6">
+                  <v-btn
+                    icon
+                    variant="text"
+                    color="white"
+                    size="large"
+                    class="mx-1 play-btn"
+                    @click="togglePlay"
+                  >
+                    <v-icon>{{ isPaused ? 'mdi-play-circle' : 'mdi-pause-circle' }}</v-icon>
+                  </v-btn>
+                </div>
+                <div class="player-timeline-wrapper d-flex align-center flex-grow-1 mr-6" style="min-width: 150px;">
+                  <span class="text-caption mr-3 font-weight-medium text-white" style="opacity: 0.8;">{{ formatTime(currentTime) }}</span>
+                  <v-progress-linear
+                    v-model="progress"
+                    clickable
+                    :height="4"
+                    color="white"
+                    :bg-opacity="0.3"
+                    rounded
+                    class="flex-grow-1 timeline-slider"
+                    @click="seekFromProgress"
+                  />
+                  <span class="text-caption ml-3 font-weight-medium text-white" style="opacity: 0.8;">{{ formatTime(duration) }}</span>
+                </div>
+              </template>
+              <div v-else-if="isGallery" class="d-flex align-center flex-grow-1 mr-6" style="min-width: 150px;">
+                <v-btn
+                  icon
+                  variant="text"
+                  color="white"
+                  size="small"
+                  class="mx-1"
+                  :disabled="slideIndex <= 0"
+                  @click="prevImage"
+                >
+                  <v-icon>mdi-chevron-left</v-icon>
+                </v-btn>
+                <span class="text-caption font-weight-medium text-white mx-2" style="opacity: 0.8;">{{ slideIndex + 1 }} / {{ rawFilePaths.length }}</span>
+                <v-btn
+                  icon
+                  variant="text"
+                  color="white"
+                  size="small"
+                  class="mx-1"
+                  :disabled="slideIndex >= rawFilePaths.length - 1"
+                  @click="nextImage"
+                >
+                  <v-icon>mdi-chevron-right</v-icon>
                 </v-btn>
               </div>
-              <div class="player-timeline-wrapper d-flex align-center flex-grow-1 mr-6" style="min-width: 150px;">
-                <span class="text-caption mr-3 font-weight-medium text-white" style="opacity: 0.8;">{{ formatTime(currentTime) }}</span>
-                <v-progress-linear
-                  v-model="progress"
-                  clickable
-                  :height="4"
-                  color="white"
-                  :bg-opacity="0.3"
-                  rounded
-                  class="flex-grow-1 timeline-slider"
-                  @click="seekFromProgress"
-                />
-                <span class="text-caption ml-3 font-weight-medium text-white" style="opacity: 0.8;">{{ formatTime(duration) }}</span>
-              </div>
+
               <div class="d-flex align-center">
-                <v-menu location="top center" :close-on-content-click="false" open-on-hover :open-delay="50">
+                <v-menu
+                  v-if="!isImage"
+                  location="top center"
+                  :close-on-content-click="false"
+                  open-on-hover
+                  :open-delay="50"
+                >
                   <template #activator="{ props }">
-                    <v-btn :icon="volumeIcon" variant="text" color="white" size="small" v-bind="props" class="mx-1" @click="toggleMute" />
+                    <v-btn
+                      :icon="volumeIcon"
+                      variant="text"
+                      color="white"
+                      size="small"
+                      v-bind="props"
+                      class="mx-1"
+                      @click="toggleMute"
+                    />
                   </template>
-                  <v-card class="py-2 px-4 rounded-lg d-flex align-center modern-glass-menu elevation-0" theme="dark" min-width="130" height="40" style="overflow: hidden;">
-                    <v-slider v-model="volume" color="white" track-color="grey" hide-details thumb-size="12" step="1" min="0" max="100" class="ma-0 pa-0 w-100" @update:model-value="onVolumeChange" />
+                  <v-card
+                    class="py-2 px-4 rounded-lg d-flex align-center modern-glass-menu elevation-0"
+                    theme="dark"
+                    min-width="130"
+                    height="40"
+                    style="overflow: hidden;"
+                  >
+                    <v-slider
+                      v-model="volume"
+                      color="white"
+                      track-color="grey"
+                      hide-details
+                      thumb-size="12"
+                      step="1"
+                      min="0"
+                      max="100"
+                      class="ma-0 pa-0 w-100"
+                      @update:model-value="onVolumeChange"
+                    />
                   </v-card>
                 </v-menu>
-                <v-btn v-if="isVideo" variant="text" size="small" icon color="white" class="mx-1" @click="isFullscreen = true">
+                <v-btn
+                  v-if="isVisualMedia"
+                  variant="text"
+                  size="small"
+                  icon
+                  color="white"
+                  class="mx-1"
+                  @click="isFullscreen = true"
+                >
                   <v-icon>mdi-fullscreen</v-icon>
-                  <v-tooltip activator="parent" location="top" open-delay="300" content-class="modern-glass-menu elevation-0 font-weight-medium text-white">
+                  <v-tooltip
+                    activator="parent"
+                    location="top"
+                    open-delay="300"
+                    content-class="modern-glass-menu elevation-0 font-weight-medium text-white"
+                  >
                     Tela Cheia
                   </v-tooltip>
                 </v-btn>
@@ -227,6 +418,7 @@
 import manifest from "../manifest.json";
 import Window from "@/components/Window.vue";
 import ButtonScreen from "@/components/buttons/Screen.vue";
+import $mediaType from "@/helpers/MediaType";
 
 export default {
   name: "ExternalMediaComponent",
@@ -268,14 +460,28 @@ export default {
     rawFilePath() {
       return this.$appdata.get("modules.external_media.filePath") || "";
     },
+    rawFilePaths() {
+      const arr = this.$appdata.get("modules.external_media.filePaths");
+      return Array.isArray(arr) && arr.length > 1 ? arr : (this.rawFilePath ? [this.rawFilePath] : []);
+    },
+    isGallery() {
+      return this.rawFilePaths.length > 1;
+    },
+    slideIndex() {
+      const idx = this.$appdata.get("modules.external_media.config.slide_index") || 0;
+      return Math.min(Math.max(idx, 0), Math.max(this.rawFilePaths.length - 1, 0));
+    },
+    currentRawPath() {
+      return this.isGallery ? (this.rawFilePaths[this.slideIndex] || this.rawFilePath) : this.rawFilePath;
+    },
     filePath() {
-      if (!this.rawFilePath) return "";
+      if (!this.currentRawPath) return "";
       if (window.electronAPI) {
         // Usa o dummy host 'app' para evitar que o Chromium altere o case do path no macOS/Linux
-        const prefix = this.rawFilePath.startsWith('/') ? 'local://app' : 'local://app/';
-        return `${prefix}${this.rawFilePath}`;
+        const prefix = this.currentRawPath.startsWith("/") ? "local://app" : "local://app/";
+        return `${prefix}${this.currentRawPath}`;
       }
-      return this.rawFilePath;
+      return this.currentRawPath;
     },
     mediaTitle() {
       return this.$appdata.get("modules.external_media.title") || "Mídia Externa";
@@ -284,9 +490,19 @@ export default {
       return this.$appdata.get("modules.external_media.subtitle") || "";
     },
     isVideo() {
-      if (!this.rawFilePath) return false;
-      const ext = this.rawFilePath.split(".").pop().toLowerCase();
-      return ["mp4", "mkv", "avi", "mov", "wmv", "webm"].includes(ext);
+      return $mediaType.isVideo(this.rawFilePath);
+    },
+    isImage() {
+      return $mediaType.isImage(this.rawFilePath);
+    },
+    isVisualMedia() {
+      return this.isVideo || this.isImage;
+    },
+    mediaKindLabel() {
+      if (this.isVideo) return "Vídeo";
+      if (this.isGallery) return "Galeria de imagens";
+      if (this.isImage) return "Imagem";
+      return "Áudio";
     },
     volumeIcon() {
       if (this.volume <= 0) return "mdi-volume-mute";
@@ -357,6 +573,9 @@ export default {
         });
       }
     },
+    rawFilePath() {
+      this.syncReturnMonitor();
+    },
   },
   mounted() {
     if (this.filePath) {
@@ -382,12 +601,35 @@ export default {
       return this.$t(`modules.${this.module_id}.${text}`);
     },
 
-    // Returns the active media element (video or audio)
+    // Returns the active media element (video or audio); images have none
     getMediaEl() {
       if (this.isVideo) {
         return this.$refs.videoEl;
       }
+      if (this.isImage) {
+        return null;
+      }
       return this.$refs.audioEl;
+    },
+
+    async syncReturnMonitor() {
+      if (window.electronAPI && window.electronAPI.getDisplays) {
+        const monitorId = this.$userdata.get("modules.config.return_screen_monitor");
+        await this.$popup.syncReturnMonitor(monitorId);
+      }
+    },
+
+    goToImage(index) {
+      const total = this.rawFilePaths.length;
+      if (total === 0) return;
+      const clamped = Math.min(Math.max(index, 0), total - 1);
+      this.$appdata.set("modules.external_media.config.slide_index", clamped);
+    },
+    prevImage() {
+      this.goToImage(this.slideIndex - 1);
+    },
+    nextImage() {
+      this.goToImage(this.slideIndex + 1);
     },
 
     setupPillObserver() {
@@ -404,22 +646,23 @@ export default {
       });
     },
 
-    // Initialize playback - waits for canplay before playing
+    // Initialize playback - waits for canplay before playing (images are ready immediately)
     initPlayback() {
       const el = this.getMediaEl();
-      if (!el) {
-        return;
+      if (el) {
+        el.volume = this.volume / 100;
+      } else if (this.isImage) {
+        this.mediaReady = true;
       }
-      el.volume = this.volume / 100;
-      
+
       if (this.autoProject && this.$refs.btnScreen) {
-        if (this.isVideo && !this.$refs.btnScreen.is_selected) {
+        if (this.isVisualMedia && !this.$refs.btnScreen.is_selected) {
           this.$refs.btnScreen.popup();
-        } else if (!this.isVideo && this.$refs.btnScreen.is_selected) {
+        } else if (!this.isVisualMedia && this.$refs.btnScreen.is_selected) {
           this.$refs.btnScreen.popup();
         }
       }
-      
+
       const syncSettings = this.$userdata.get("modules.config.media_sync_projection_settings") !== false;
       const minimizePlayer = syncSettings 
         ? this.$userdata.get("modules.config.slide_minimize_player") === true
@@ -614,6 +857,7 @@ export default {
       this.$appdata.set("modules.external_media.show", false);
       this.$appdata.set("modules.external_media.minimized", false);
       this.$appdata.set("modules.external_media.filePath", "");
+      this.$appdata.set("modules.external_media.filePaths", []);
       this.$appdata.set("modules.external_media.title", "");
 
       // Close projection if open
@@ -727,5 +971,32 @@ export default {
 .slide-up-leave-to {
   transform: translateY(100%);
   opacity: 0;
+}
+
+.gallery-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+}
+.gallery-nav-prev {
+  left: 20px;
+}
+.gallery-nav-next {
+  right: 20px;
+}
+.gallery-counter {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
 }
 </style>

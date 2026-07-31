@@ -68,10 +68,10 @@ ipcMain.handle('open-file-dialog', async (event, options) => {
     filters: options?.filters || [
       { name: 'Vídeos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'webm'] },
     ],
-    properties: ['openFile'],
+    properties: options?.multiple ? ['openFile', 'multiSelections'] : ['openFile'],
   });
-  if (result.canceled) return null;
-  return result.filePaths[0];
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return options?.multiple ? result.filePaths : result.filePaths[0];
 });
 
 ipcMain.handle('open-external', async (event, url) => {

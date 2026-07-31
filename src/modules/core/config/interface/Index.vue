@@ -262,7 +262,7 @@
                           
                           <v-switch
                             v-model="media_auto_project_video"
-                            label="Projetar vídeos automaticamente ao abrir"
+                            label="Projetar vídeos e imagens automaticamente ao abrir"
                             color="primary"
                             hide-details
                             inset
