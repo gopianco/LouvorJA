@@ -1637,7 +1637,9 @@ export default {
       return this.$t(`modules.${this.module_id}.${text}`);
     },
     async syncExternalMediaMonitors() {
-      const isExternalMediaActive = this.$appdata.get("modules.external_media.filePath") != null;
+      // filePath fica em "" (string vazia) quando a mídia é fechada, não null —
+      // por isso a checagem precisa ser de "tem conteúdo", não apenas "não é null".
+      const isExternalMediaActive = !!this.$appdata.get("modules.external_media.filePath");
       if (!isExternalMediaActive) return;
 
       const syncSettings = this.$userdata.get("modules.config.media_sync_projection_settings") !== false;
