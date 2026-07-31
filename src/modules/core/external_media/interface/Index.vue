@@ -655,6 +655,14 @@ export default {
         this.mediaReady = true;
       }
 
+      // Marca popup_module independentemente de fullscreen/autoProject estarem
+      // ativos: a tela de retorno e a barra de status usam esse valor para saber
+      // que existe mídia visual em reprodução, mesmo quando o operador optou por
+      // não projetar automaticamente a tela principal.
+      if (this.isVisualMedia) {
+        this.$appdata.set("popup_module", "external_media");
+      }
+
       if (this.autoProject && this.$refs.btnScreen) {
         if (this.isVisualMedia && !this.$refs.btnScreen.is_selected) {
           this.$refs.btnScreen.popup();
