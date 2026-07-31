@@ -93,6 +93,11 @@ export default {
 
           if (this.is_external_video) {
             if (fullscreen) {
+              // Vídeo em setup de monitor único: não abre uma janela de popup real
+              // (a própria tela do operador em fullscreen já é a tela principal), mas
+              // ainda assim precisa marcar popup_module para a tela de retorno e outros
+              // indicadores saberem que a mídia externa está sendo exibida.
+              this.$appdata.set("popup_module", this.module);
               this.$emit("fullscreen");
             }
           } else {
