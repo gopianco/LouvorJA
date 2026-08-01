@@ -99,6 +99,11 @@ export default {
               // indicadores saberem que a mídia externa está sendo exibida.
               this.$appdata.set("popup_module", this.module);
               this.$emit("fullscreen");
+              // Sem janela de popup criada, nada dispara a sincronização da tela
+              // de retorno automaticamente — ela precisa ser pedida aqui.
+              await this.$popup.syncReturnMonitor(
+                $userdata.get("modules.config.return_screen_monitor"),
+              );
             }
           } else {
             this.$popup.open({ module: this.module, fullscreen });

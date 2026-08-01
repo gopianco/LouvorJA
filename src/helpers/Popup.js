@@ -11,12 +11,23 @@ function splitPopups() {
   };
 }
 
+// A tela de retorno espelha o que está sendo projetado. Por isso quem decide se
+// ela existe é o módulo em projeção (popup_module) — e não apenas haver conteúdo
+// carregado no app. Sem projeção a janela é fechada de verdade, revelando o papel
+// de parede e deixando a barra de status/relógio à vista.
 function isReturnContentActive() {
-  return (
-    $appdata.get("modules.media.id_music") != null ||
-    !!$appdata.get("modules.bible.data.text") ||
-    !!$appdata.get("modules.external_media.filePath")
-  );
+  switch ($appdata.get("popup_module")) {
+    case "media":
+      return $appdata.get("modules.media.id_music") != null;
+    case "bible":
+      return !!$appdata.get("modules.bible.data.text");
+    case "external_media":
+      return !!$appdata.get("modules.external_media.filePath");
+    case "timer":
+      return !!$appdata.get("timer.started");
+    default:
+      return false;
+  }
 }
 
 // Janelas de barra (status/relógio da tela de retorno, aviso sob demanda).
@@ -43,48 +54,88 @@ async function resolveNoticeMonitors(target) {
   return configMonitors.length > 0 ? configMonitors : [null];
 }
 
+function setPopups(mainPopups, returnPopups) {
+  $appdata.set("popups", [...mainPopups, ...returnPopups]);
+  $appdata.set("popup", mainPopups.length > 0 ? mainPopups[0] : null);
+}
+
+async function applyReturnMonitor(monitorId) {
+  const { mainPopups, returnPopups } = splitPopups();
+  const enabled = !!monitorId && isReturnContentActive();
+
+  if (!enabled) {
+    returnPopups.forEach(popup => popup.close());
+    $appdata.set("popups", mainPopups);
+    return;
+  }
+
+  let keep = returnPopups.find(popup => popup.monitorId === monitorId);
+  returnPopups.forEach(popup => {
+    if (popup !== keep) {
+      popup.close();
+    }
+  });
+
+  if (!keep) {
+    const features = `width=800,height=600,monitor=${monitorId},fullscreen=yes`;
+    const newPopup = $window.open("#/popup?role=return", `PopupReturnWindow_${monitorId}`, features);
+    newPopup.monitorId = monitorId;
+    newPopup.role = "return";
+    keep = markRaw(newPopup);
+  }
+
+  $appdata.set("popups", [...mainPopups, keep]);
+}
+
+// Reavalia a tela de retorno após qualquer mudança na projeção principal, para
+// que abrir/fechar/trocar de módulo nunca a deixe presa num estado antigo (ex.:
+// parada na tela de pausa, cobrindo o papel de parede e a barra de status).
+async function refreshReturnMonitor() {
+  await applyReturnMonitor($userdata.get("modules.config.return_screen_monitor"));
+}
+
 export default {
   async open(params) {
     if (typeof params !== "object") {
       params = { module: params };
     }
 
-    let popups = $appdata.get("popups") || [];
-
-    popups = popups.filter(p => !p.closed);
+    // Só as janelas de conteúdo entram aqui: a janela da tela de retorno tem
+    // ciclo de vida próprio e não pode ser focada nem descartada no lugar delas.
+    const { mainPopups, returnPopups } = splitPopups();
+    let popups = mainPopups;
 
     if (params.monitorId) {
       const existing = popups.find(p => p.monitorId === params.monitorId);
-      if (existing && !existing.closed) {
+      if (existing) {
         existing.focus();
       } else {
         let features = `width=800,height=600,monitor=${params.monitorId}`;
         if (params.fullscreen) features += ",fullscreen=yes";
         const newPopup = $window.open("#/popup", `PopupWindow_${params.monitorId}`, features);
         newPopup.monitorId = params.monitorId;
-        popups.push(markRaw(newPopup));
+        popups = [...popups, markRaw(newPopup)];
       }
+    } else if (popups.length > 0) {
+      popups[0].focus();
     } else {
-      if (popups.length > 0 && !popups[0].closed) {
-        popups[0].focus();
-      } else {
-        let features = "width=800,height=600";
-        if (params.fullscreen) features += ",fullscreen=yes";
-        popups = [markRaw($window.open("#/popup", "PopupWindow", features))];
-      }
+      let features = "width=800,height=600";
+      if (params.fullscreen) features += ",fullscreen=yes";
+      popups = [markRaw($window.open("#/popup", "PopupWindow", features))];
     }
 
     $appdata.set("popup_module", params.module);
-    $appdata.set("popups", popups);
-    if (popups.length > 0) {
-      $appdata.set("popup", popups[0]);
-    }
+    setPopups(popups, returnPopups);
+
+    await refreshReturnMonitor();
   },
   async exit() {
     const { mainPopups, returnPopups } = splitPopups();
     mainPopups.forEach(popup => popup.close());
     $appdata.set("popup_module", "");
-    $appdata.set("popups", returnPopups);
+    setPopups([], returnPopups);
+
+    await refreshReturnMonitor();
   },
   async syncMonitors(monitors, moduleName = "media", forceOpen = false) {
     const split = splitPopups();
@@ -115,37 +166,12 @@ export default {
       }
     }
 
-    $appdata.set("popups", [...mainPopups, ...returnPopups]);
-    if (mainPopups.length > 0) {
-      $appdata.set("popup", mainPopups[0]);
-    }
+    setPopups(mainPopups, returnPopups);
+
+    await refreshReturnMonitor();
   },
   async syncReturnMonitor(monitorId) {
-    const { mainPopups, returnPopups } = splitPopups();
-    const enabled = !!monitorId && isReturnContentActive();
-
-    if (!enabled) {
-      returnPopups.forEach(popup => popup.close());
-      $appdata.set("popups", mainPopups);
-      return;
-    }
-
-    let keep = returnPopups.find(popup => popup.monitorId === monitorId);
-    returnPopups.forEach(popup => {
-      if (popup !== keep) {
-        popup.close();
-      }
-    });
-
-    if (!keep) {
-      const features = `width=800,height=600,monitor=${monitorId},fullscreen=yes`;
-      const newPopup = $window.open("#/popup?role=return", `PopupReturnWindow_${monitorId}`, features);
-      newPopup.monitorId = monitorId;
-      newPopup.role = "return";
-      keep = markRaw(newPopup);
-    }
-
-    $appdata.set("popups", [...mainPopups, keep]);
+    await applyReturnMonitor(monitorId);
   },
   async projectModule(moduleName) {
     let selectedMonitors = [];

@@ -661,6 +661,9 @@ export default {
       // não projetar automaticamente a tela principal.
       if (this.isVisualMedia) {
         this.$appdata.set("popup_module", "external_media");
+        // A tela de retorno só é reavaliada depois que popup_module muda — o
+        // watcher de filePath roda antes disto e veria o módulo antigo.
+        this.syncReturnMonitor();
       }
 
       if (this.autoProject && this.$refs.btnScreen) {

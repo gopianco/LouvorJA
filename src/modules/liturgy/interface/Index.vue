@@ -1452,13 +1452,9 @@ export default {
     // ====== EXECUTE/PROJECT ITEMS ======
     async executeItem(item) {
       if (item.type === "verse" && this.isItemActive(item)) {
-        await this.$popup.exit();
         this.$appdata.set("modules.bible.data.text", null);
         this.$appdata.set("modules.bible.data.scriptural_reference", null);
-        const returnMonitorId = this.$userdata.get("modules.config.return_screen_monitor");
-        if (returnMonitorId) {
-          await this.$popup.syncReturnMonitor(returnMonitorId);
-        }
+        await this.$popup.exit();
         return;
       }
 

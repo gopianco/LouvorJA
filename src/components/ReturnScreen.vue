@@ -28,7 +28,7 @@
         {{ main_text }}
       </div>
       <div v-else-if="main_text" class="text-center current-lyric" v-html="main_text" />
-      <div v-else class="text-center current-lyric" style="opacity: 0.5;">
+      <div v-else-if="!is_timer_active" class="text-center current-lyric" style="opacity: 0.5;">
         {{ is_bible_active ? t("return_screen_no_verse") : t("return_screen_pause") }}
       </div>
 
@@ -57,6 +57,11 @@ export default {
     },
     is_external_media_active() {
       return this.popup_module === "external_media";
+    },
+    // Com o cronômetro projetado, o TimerOverlay já ocupa a tela — o texto de
+    // "Pausa" atrás dele só polui a tela de retorno.
+    is_timer_active() {
+      return this.popup_module === "timer" && !!this.$appdata.get("timer.started");
     },
     external_media_raw_path() {
       return this.$appdata.get("modules.external_media.filePath") || "";

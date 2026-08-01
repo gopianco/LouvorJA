@@ -1,7 +1,7 @@
 {
   "id": "external_media",
   "name": "External Media Player",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Player de Mídia Externa. Reproduz vídeos e áudios importados da liturgia diretamente dentro do programa.",
   "author": "elvieira",
   "category": null,

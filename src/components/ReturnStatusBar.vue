@@ -24,11 +24,10 @@ export default {
     popup_module() {
       return this.$appdata.get("popup_module");
     },
-    is_bible_active() {
-      return this.popup_module === "bible";
-    },
+    // Contagem de slides/tempo só faz sentido projetando música; em qualquer
+    // outro estado (vago, Bíblia, mídia, cronômetro...) a barra mostra o relógio.
     show_clock() {
-      return !this.popup_module || this.is_bible_active || this.popup_module === "external_media";
+      return this.popup_module !== "media";
     },
     clock() {
       return this.now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
