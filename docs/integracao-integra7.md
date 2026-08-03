@@ -22,6 +22,8 @@ A integração usa o contrato existente `GET /integrations/schedule` (auth por `
 
 P0-3 reenquadra as demais: com a tradução no servidor, boa parte da complexidade sai do cliente.
 
+A **seção 10** reserva espaço para duas capacidades já previstas — músicas personalizadas por igreja e sincronização de temas. Elas não entram na v1, mas três reservas precisam entrar agora (`X-Client-Capabilities`, `musicSource` e `scope`), porque adicioná-las depois quebraria clientes desktop já instalados.
+
 ---
 
 ## 2. Os dois lados
@@ -346,8 +348,169 @@ Ingestão do catálogo (músicas + livros bíblicos), `kind: scripture` com entr
 - [ ] **P2-1** `primary:true` em anexos (o adaptador depende disso); `durationSeconds`; desduplicar `HEADER`; definir `background`
 - [ ] **P2-2** Expor `updatedAt` ou suportar `ETag`
 
+**Reservas para o futuro (ver seção 10) — baratas agora, caras depois:**
+
+- [ ] **R0** Ler `X-Client-Capabilities` e emitir recurso avançado só a quem declarou
+- [ ] **R1** `musicSource: "catalog"` no item `music` da v1, mesmo sendo constante
+- [ ] **R3** Campo `scope` em `clientSettings`
+
 ## 9. Segurança
 
 O `X-Integration-Token` é **por igreja** e fica armazenado na máquina do operador. Ele deve ser configurado **por instalação**, na tela de Configurações — nunca commitado em `.env`. (O `VITE_API_TOKEN` versionado hoje no repositório é um problema pré-existente, de escopo separado, mas não deve servir de precedente aqui.)
 
 Como o token não expira sozinho, `POST /churches/mine/integration-token/regenerate` é o caminho para revogar o acesso de uma máquina perdida — lembrando que a regeneração invalida o token em **todas** as instalações da igreja, exigindo recadastro nas demais.
+
+---
+
+## 10. Extensões futuras — espaço reservado agora
+
+Duas capacidades já previstas: **músicas personalizadas por igreja** e **sincronização de temas**. Nenhuma delas entra na v1, mas o contrato precisa reservar espaço agora — retrofitar depois quebra clientes desktop já instalados, que é exatamente o cenário que P0-3 existe para evitar.
+
+### R0 · Negociação de capacidades — a reserva mais importante
+
+`formatVersion` resolve mudanças **incompatíveis**. Não resolve o caso mais comum: um recurso **aditivo** que o servidor já emite e o cliente instalado não entende.
+
+Com um cliente desktop que atualiza lentamente, isso é a regra, não a exceção. Sem negociação de capacidades, toda extensão futura vira ou um bump de `formatVersion` (quebrando quem não atualizou) ou um campo que clientes antigos ignoram silenciosamente e projetam errado.
+
+**Proposta — o cliente declara o que sabe fazer:**
+
+```http
+GET /integrations/schedule?event_id=123&format=louvorja&formatVersion=1
+X-Integration-Token: <token>
+X-Client-Capabilities: music.catalog, theme.settings
+```
+
+O servidor emite recursos avançados **apenas** para clientes que os declararam; para os demais, degrada com `unresolved` (o mecanismo de P0-3 já cobre isso). Capacidades sugeridas, todas ausentes na v1:
+
+| Capacidade | Significa |
+|---|---|
+| `music.catalog` | resolve `musicId` contra o catálogo global (todo cliente v1 tem) |
+| `music.church` | sabe renderizar música personalizada da igreja |
+| `music.church.audio` | sabe baixar e tocar áudio de música personalizada |
+| `theme.settings` | aceita configurações de tema por evento |
+| `theme.assets` | sabe baixar imagens/vídeos de fundo de tema |
+| `media.download` | sabe baixar mídia remota para cache local |
+
+Isso torna **toda** extensão futura aditiva e segura, sem novo `formatVersion` e sem exigir atualização em campo.
+
+---
+
+### F1 · Músicas personalizadas por igreja
+
+**O que o código impõe.** Uma música no LouvorJA não é uma linha numa tabela — é um documento próprio, buscado em `$database.get('music_<id>')` (`src/helpers/Media.js:69`), com esta forma:
+
+```jsonc
+{
+  "name": "...",
+  "url_music": "/musics/...",              // áudio
+  "url_instrumental_music": "/musics/...",
+  "url_image": "/images/...",              // fundo padrão
+  "duration": "3:45",
+  "albums": [...], "categories": [...],
+  "lyric": {                                // os slides
+    "1": {
+      "lyric": "texto do slide",
+      "order": 1,
+      "show_slide": 1,
+      "time": "00:00:12",                  // sincronismo com o áudio
+      "instrumental_time": "00:00:12",
+      "url_image": "/images/...",          // fundo por slide (opcional)
+      "image_position": "center"
+    }
+  }
+}
+```
+
+Os slides são montados a partir de `lyric`, filtrando `show_slide === 1` e ordenando por `order` (`Media.js:459-474`).
+
+**A restrição decisiva — o desktop é offline-estrito.** Em `Media.js:144-159`, se o áudio não estiver baixado localmente o app **recusa tocar** e manda o operador à Biblioteca Local. Não há fallback de streaming no desktop. Existe pipeline de download (`downloadMedia` em `electron/preload.js:8`, via FTP em `electron/main.js:400`), mas ele é orquestrado pelo módulo de sync contra o catálogo LouvorJA — não sabe baixar de uma origem arbitrária.
+
+**Três problemas de contrato, portanto:**
+
+1. **Colisão de namespace.** `musicId` hoje é um inteiro no namespace global. A música #5 da Igreja Central colidiria com a #5 do catálogo.
+2. **O documento não existe.** O cliente não tem onde buscar `music_<id>` de uma música que não está no catálogo LouvorJA.
+3. **Áudio não toca.** Mesmo com URL válida, o desktop recusa o que não passou pelo pipeline local.
+
+**Proposta.**
+
+**R1 — `musicSource` desde já na v1.** Discriminador obrigatório no item `music`, mesmo que a v1 só emita `catalog`:
+
+```json
+{ "type": "music", "musicSource": "catalog", "musicId": 1042 }
+```
+
+Custo hoje: um campo constante. Ganho: `musicId` nunca vira um inteiro ambíguo. **Esta é a única reserva que precisa entrar na v1** — as demais podem esperar, esta não.
+
+**F1 v1 — letra inline, sem áudio.** Quando a igreja tiver músicas próprias, elas viajam **dentro** do payload do cronograma, não como referência a resolver:
+
+```json
+{
+  "itemId": 8892,
+  "type": "music",
+  "musicSource": "church",
+  "churchSongId": "c12-s88",
+  "name": "Cântico da Igreja Central",
+  "slides": [
+    { "order": 1, "text": "primeira estrofe..." },
+    { "order": 2, "text": "segunda estrofe..." }
+  ]
+}
+```
+
+Inline porque o cliente é offline-estrito e não tem como buscar um documento de música arbitrário no Integra7. Inline significa **zero infraestrutura nova de sync**: a importação já traz tudo, e funciona offline no momento do culto.
+
+Áudio fica de fora da v1 pela restrição acima — letra projeta, áudio o operador toca como já toca hoje. Quando o cliente ganhar `music.church.audio`, o áudio entra por `source: url` + pipeline de download, reaproveitando o que a fase 3 já precisa construir para mídia remota.
+
+`churchSongId` estável permite ao cliente cachear localmente e reimportar sem duplicar.
+
+---
+
+### F2 · Sincronização de temas
+
+**O que o código mostra.** **Não existe entidade "tema" no LouvorJA.** `src/helpers/Theme.js` tem sete linhas e só devolve uma cor do Vuetify. O que funciona como tema é um conjunto plano de ~24 chaves em `modules.config.*`, enumeradas em `src/modules/core/config/interface/Index.vue:1619-1627`:
+
+`slide_custom_bg`, `slide_bg_color`, `slide_bg_image`, `slide_bg_opacity`, `slide_font_size`, `slide_font_color`, `slide_font_weight`, `slide_custom_text_format`, mais as cores da tela de retorno e da barra de avisos.
+
+Detalhe relevante: `slide_bg_image` é gravado como **data URI** (`Index.vue:1709`, via `FileReader`), não como caminho. Imagens de fundo já viajam como dados embutidos.
+
+**A boa notícia:** o lado de vocês já tem os ganchos prontos — `clientSettings` é ecoado na resposta do cronograma "sem interpretação", e `GET/PUT /integrations/client-settings` guarda preferências "por kind (JSON opaco)". Um bag plano de chave/valor mapeia 1:1 em JSON opaco. **Tema é a extensão mais barata das duas** — do lado do contrato, quase nada muda.
+
+**O que precisa ser acordado agora é escopo e precedência**, porque isso é caro de mudar depois:
+
+| Nível | Onde vive | Exemplo |
+|---|---|---|
+| Igreja | `client-settings` | identidade visual padrão da casa |
+| Evento | `clientSettings` no cronograma | culto de Natal, Santa Ceia |
+| Item | anexo do item | um louvor com fundo próprio |
+
+**R3 — reservar `scope` já na v1**, mesmo que só o nível de igreja seja emitido:
+
+```json
+"clientSettings": {
+  "scope": "event",
+  "themeId": "natal-2026",
+  "values": { "slide_bg_color": "#0b3d2e", "slide_font_color": "#ffffff" }
+}
+```
+
+Precedência: item > evento > igreja > local.
+
+**R2 — assets de tema reusam a semântica de `source` que já existe** (`url` | `client_only` | `reference`), mais `inline` para data URI pequena. Fundo de vídeo ou imagem grande não cabe inline e depende de `theme.assets` + pipeline de download; data URI pequena funciona hoje, sem cliente novo.
+
+**Questão de governança — recomendação.** Tema importado **não deve sobrescrever silenciosamente** a configuração local do operador. Ele é quem está fisicamente na sala, vendo o projetor, e pode ter ajustado contraste por causa da luz ou do equipamento daquele dia. Recomendação: aplicar em um slot de tema nomeado, com adesão opt-in por instalação, e nunca por cima do que o operador configurou à mão. É a mesma lógica do `$alert.yesno` antes de sobrescrever a liturgia.
+
+---
+
+### Resumo do que entra quando
+
+| Reserva | Quando | Custo hoje |
+|---|---|---|
+| **R1** `musicSource: "catalog"` no item `music` | **v1** | um campo constante |
+| **R0** `X-Client-Capabilities` + degradação por `unresolved` | **v1** | ler um header e ramificar |
+| **R3** `scope` em `clientSettings` | v1 se `clientSettings` já for emitido | um campo |
+| **R2** `source` em assets de tema | junto com F2 | reusa o que já existe |
+| F1 músicas da igreja (letra inline) | fase 4 | — |
+| F1 áudio de música da igreja | depois de `media.download` (fase 3) | — |
+| F2 temas por evento | fase 4 | — |
+
+Do lado do cliente, a v1 precisa apenas **enviar suas capacidades e degradar o que não entende** — os dois comportamentos que tornam tudo o mais aditivo depois.
